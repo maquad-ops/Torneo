@@ -1,61 +1,74 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classifica Torneo</title>
-    <!-- Carichiamo la libreria per leggere il CSV -->
-    <script src="https://drive.google.com/file/d/1tJD2l8Hy5dCdCZWBUiP0uUqCXUT5v1tP/view?usp=drivesdk"></script>
-    <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f4f9; }
-        table { margin: 20px auto; border-collapse: collapse; width: 80%; background: white; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
-        th { background-color: #007bff; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Campionato</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+    h2 { border-bottom: 2px solid #333; padding-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+    th { background: #333; color: white; padding: 8px; text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #ddd; }
+    tr:hover { background: #f5f5f5; }
+    .win { color: green; font-weight: bold; }
+    .loss { color: red; }
+  </style>
 </head>
 <body>
+  <h1>Torneo Memorial Luigi Arioli 25-04-2026</h1>
+  <h2>Partite</h2>
+  <div id="partite"></div>
+  <h2>Classifica</h2>
+  <div id="classifica"></div>
 
-    <h1>🏆 Classifica in Tempo Reale</h1>
-    <p>Aggiornamento automatico dai dati del campo</p>
+  <script>
+    const CSV_URL = 'INCOLLA_QUI_IL_TUO_URL_CSV';
 
-    <div id="tabella-container">Caricamento dati...</div>
+    fetch(CSV_URL)
+      .then(r => r.text())
+      .then(csv => {
+        const righe = csv.trim().split('\n').slice(1); // salta intestazione
+        const partite = righe.map(r => {
+          const [data, casa, ospite, gc, go] = r.split(',');
+          return { data, casa, ospite, gc: +gc, go: +go };
+        });
 
-    <script>
-        // SOSTITUISCI IL LINK QUI SOTTO CON IL TUO LINK CSV DI GOOGLE SHEETS
-        const public_spreadsheet_url = 'INCOLLA_QUI_IL_TUO_LINK_CSV';
+        mostraPartite(partite);
+        mostraClassifica(partite);
+      });
 
-        function init() {
-            Papa.parse(public_spreadsheet_url, {
-                download: true,
-                header: true,
-                complete: function(results) {
-                    costruisciTabella(results.data);
-                }
-            });
-        }
+    function mostraPartite(partite) {
+      let html = '<table><tr><th>Data</th><th>Casa</th><th>Risultato</th><th>Ospite</th></tr>';
+      partite.forEach(p => {
+        const ris = `${p.gc} - ${p.go}`;
+        html += `<tr><td>${p.data}</td><td>${p.casa}</td><td><strong>${ris}</strong></td><td>${p.ospite}</td></tr>`;
+      });
+      html += '</table>';
+      document.getElementById('partite').innerHTML = html;
+    }
 
-        function costruisciTabella(data) {
-            let html = '<table><thead><tr>';
-            // Crea intestazioni
-            Object.keys(data[0]).forEach(key => {
-                html += `<th>${key}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            // Crea righe
-            data.forEach(row => {
-                html += '<tr>';
-                Object.values(row).forEach(val => {
-                    html += `<td>${val}</td>`;
-                });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            document.getElementById('tabella-container').innerHTML = html;
-        }
+    function mostraClassifica(partite) {
+      const sq = {};
+      partite.forEach(({ casa, ospite, gc, go }) => {
+        [casa, ospite].forEach(s => {
+          if (!sq[s]) sq[s] = { pg:0, v:0, n:0, p:0, gf:0, gs:0, pt:0 };
+        });
+        sq[casa].pg++; sq[ospite].pg++;
+        sq[casa].gf += gc; sq[casa].gs += go;
+        sq[ospite].gf += go; sq[ospite].gs += gc;
+        if (gc > go) { sq[casa].v++; sq[casa].pt+=3; sq[ospite].p++; }
+        else if (gc < go) { sq[ospite].v++; sq[ospite].pt+=3; sq[casa].p++; }
+        else { sq[casa].n++; sq[ospite].n++; sq[casa].pt++; sq[ospite].pt++; }
+      });
 
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
+      const sorted = Object.entries(sq).sort((a,b) => b[1].pt - a[1].pt || (b[1].gf-b[1].gs)-(a[1].gf-a[1].gs));
+      let html = '<table><tr><th>#</th><th>Squadra</th><th>PG</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>Pt</th></tr>';
+      sorted.forEach(([nome, s], i) => {
+        html += `<tr><td>${i+1}</td><td>${nome}</td><td>${s.pg}</td><td>${s.v}</td><td>${s.n}</td><td>${s.p}</td><td>${s.gf}</td><td>${s.gs}</td><td><strong>${s.pt}</strong></td></tr>`;
+      });
+      html += '</table>';
+      document.getElementById('classifica').innerHTML = html;
+    }
+  </script>
 </body>
 </html>
