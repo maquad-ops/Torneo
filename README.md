@@ -1,1 +1,1 @@
-Pulcini 2016 - Torneo memorial Luigi Arioli
+Pulcini 2016 - 28° Torneo Rosso Blu
